@@ -1,4 +1,4 @@
-<center><img src="https://raw.githubusercontent.com/ndyetz/AIR/master/air%20logo.png" width="400" height="790"></center>
+<center> ![AIR](https://raw.githubusercontent.com/ndyetz/AIR/master/AIR_logo.jpg)</center>
 
 <br>
 <br>
