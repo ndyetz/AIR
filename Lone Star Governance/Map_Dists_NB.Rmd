@@ -1,0 +1,168 @@
+---
+title: ""
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE, results = "hide"}
+library(tigris       ) #school map placement
+library(leaflet      ) #
+library(tidyverse    )
+library(USAboundaries)
+library(maps         )
+library(plotly       )
+library(ggmap        )
+library(rgdal        )
+library(ggplot2      )
+library(rgeos        )
+library(maptools     )
+library(ggimage      )
+library(png          )
+library(grid         )
+
+schools <- read_csv("Current_schools.csv")
+comp_dists <- read_csv("LSG_Matched Pairs_NY.csv")
+district <- read_csv("Current_Districts (1).csv")
+
+school_leaf <- suppressWarnings(suppressMessages(school_districts("Texas", progress_bar = FALSE)))
+
+
+
+distnames <- comp_dists %>% 
+  select(DISTRICT) %>% 
+  mutate(DISTRICT = str_pad(DISTRICT, width = 6, side = "left", pad = "0"),
+         DISTRICT = str_pad(DISTRICT, width = 7, side = "left", pad = "'")) %>% 
+  as.matrix() %>% 
+  as.vector()
+
+school_imp <- schools %>% 
+  filter(District_N %in% distnames)
+
+treatment <- comp_dists %>% 
+  mutate(DISTRICT = str_pad(DISTRICT, width = 6, side = "left", pad = "0"),
+         DISTRICT = str_pad(DISTRICT, width = 7, side = "left", pad = "'"),
+         Group = factor(treat, levels = c(0,1), labels = c("Control District", "LSG District"))) %>% 
+  select(District_N = "DISTRICT", everything() ) %>% 
+  right_join(school_imp, by = "District_N")
+
+
+fort_school <- fortify(school_leaf, region= "NAME")
+
+
+
+treatment_red <- treatment %>% 
+  arrange(Ymax,desc(Xmax)) %>% 
+  group_by(District_N) %>% 
+  slice(1) %>% 
+  ungroup()
+
+
+fort_school2 <- fort_school %>% 
+  mutate(DISTNAME = str_replace_all(id, "Independent School District", "ISD"),
+         DISTNAME = toupper(DISTNAME)) %>% 
+  select(long, lat, id, DISTNAME) %>% 
+  right_join(treatment_red, by = "DISTNAME") %>% 
+  rename(`District Name` = "DISTNAME")
+
+
+fort_school <- fort_school %>% 
+  rename(`District Name` = "id")
+
+
+
+ m <- readPNG("D:/Git/AIR/Lone Star Governance/lonestar.png")
+ w <- matrix(rgb(m[,,1],m[,,2],m[,,3], m[,,4] * 0.2), nrow=dim(m)[1]) #0.2 is alpha
+
+
+ 
+ treatment_red <- treatment_red %>% 
+   mutate(DisplayY = DisplayY + .15)
+ 
+
+
+
+```
+
+
+```{r}
+
+#final <- 
+
+p <- ggplot() +
+  #geom_polygon(data = map_data("state", region = "texas"), aes(x=long, y=lat, group=group), col="black", fill = "white", size = 4) +
+  geom_polygon(data = fort_school, aes(x = long, y = lat, group = `District Name`), fill = NA,  color = "black", size = 1.5) +
+  geom_polygon(data = fort_school, aes(x = long, y = lat, group = `District Name`), fill = "white",  color = NA, size = 0.000) +
+         annotation_custom(rasterGrob(w, 
+                                 width = .35, 
+                                 height = .35
+                           ), ymin = 26.5) +#, 
+                     # xmin = (-99), xmax = -95, ymin = 30, ymax = 33) +
+  geom_point(data = treatment_red, aes(x = X, y = Y), color = "NA") +
+  #geom_polygon(data = fort_school2, aes(x = long, y = lat, group = `District Name`, fill = Group), color = "gray", size = .001)  +
+  #geom_polygon(data = fort_school, aes(x = long, y = lat, group = `District Name`), fill = "white",  color = "black", size = .05, alpha = 1) +
+  theme_void() +
+
+  geom_image(data = treatment_red, aes(x = DisplayX, y = DisplayY, image="D:/Git/AIR/Lone Star Governance/baloons/yellowpng.png"), size=.02) +
+ theme(panel.background = element_rect(fill = "transparent"))
+#  scale_x_continuous(breaks= seq(95, 106, 1))+
+#  scale_y_continuous(breaks = seq(26, 35, 1))
+# +
+  #ggtitle("Lonestar Governance (LSG) & Control District Spatial Comparison") +
+  #theme(legend.position = c(0.4, 0.2))
+
+
+ggsave(p, filename = "yellow_transparent.png",  bg = "transparent")
+
+```
+
+
+
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12, fig.height=8}
+#ggplotly(final) %>% 
+#  layout(
+#legend = list(
+#    x = .3,
+#    y = .1
+#  ),
+#xaxis = list(
+#  title = "",
+#  zeroline = FALSE,
+#  showline = FALSE,
+#  showticklabels = FALSE,
+#  showgrid = FALSE
+#  ),
+#yaxis = list(
+#  title = "",
+#  zeroline = FALSE,
+#  showline = FALSE,
+#  showticklabels = FALSE,
+#  showgrid = FALSE
+#  )
+#)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
